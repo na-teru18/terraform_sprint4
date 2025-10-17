@@ -95,6 +95,56 @@ resource "aws_launch_template" "terraform_launch_template" {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.terraform_api_sg.id]
   }
+
+  user_data = <<-EOF
+#!/bin/bash
+HOME_DIR="/home/ec2-user/"
+
+dnf update -y
+dnf install -y git golang nginx
+
+cd ${HOME_DIR}
+git clone https://github.com/CloudTechOrg/cloudtech-reservation-api.git
+
+cat << 'SERVICE_FILE' > /etc/systemd/system/goserver.service
+[Unit]
+Description=Go Server
+
+[Service]
+WorkingDirectory=/home/ec2-user/cloudtech-reservation-api
+ExecStart=/usr/bin/go run main.go
+User=ec2-user
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+SERVICE_FILE
+
+systemctl daemon-reload
+systemctl enable goserver.service
+systemctl start goserver.service
+
+systemctl start nginx
+systemctl enable nginx
+
+sed -i '/^server {/, /^}$/d' /etc/nginx/nginx.conf
+
+cat << 'NGINX_CONF' >> /etc/nginx/nginx.conf
+server {
+        listen 80;
+        server_name _;
+        location / {
+            proxy_pass http://localhost:8080;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+}
+
+systemctl restart nginx
+  EOF
 }
 
 # Auto Scaling Group
