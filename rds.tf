@@ -15,7 +15,7 @@ resource "aws_security_group" "terraform_db_sg" {
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.terraform_ec2_sg.id]
+    security_groups = [aws_security_group.terraform_api_sg.id]
   }
 
   egress {

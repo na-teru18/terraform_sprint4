@@ -6,6 +6,7 @@ locals {
 # Create Route53 records for the CloudFront distribution aliases
 data "aws_route53_zone" "terraform_main_domain" {
   name = local.my_main_domain
+  private_zone = false
 }
 
 resource "aws_route53_record" "cloudfront" {

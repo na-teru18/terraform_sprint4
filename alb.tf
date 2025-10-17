@@ -5,7 +5,7 @@ locals {
 # ACM（AWS Certificate Manager）で事前に発行したSSL/TLS証明書の情報
 data "aws_acm_certificate" "terraform_sub_domain" {
   region   = "us-east-1"
-  domain   = "*.${local.sub_domain}"
+  domain   = local.sub_domain
   statuses = ["ISSUED"]
 }
 
@@ -86,16 +86,10 @@ resource "aws_lb_listener_rule" "myapp_listener_rule" {
   }
 }
 
-# SSL/TLS証明書をALBと関連付ける
-# resource "aws_lb_listener_certificate" "terraform_alb_certificate" {
-#   listener_arn    = aws_lb_listener.terraform_alb_listener.arn
-#   certificate_arn = data.aws_acm_certificate.terraform_sub_domain.arn
-# }
-
 # 起動テンプレートの作成
 resource "aws_launch_template" "terraform_launch_template" {
   name          = "api-server-template"
-  image_id      = "ami-0d4aa492f133a3068" # AMIのIDを指定
+  image_id      = "ami-0341d95f75f311023" # AMIのIDを指定
   instance_type = "t2.micro"
   network_interfaces {
     associate_public_ip_address = true

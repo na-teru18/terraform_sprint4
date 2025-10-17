@@ -33,6 +33,12 @@ resource "aws_s3_object" "terraform_github_object" {
   key = each.value
   # ファイルのローカルパス
   source = "${local.dir_path}${each.value}"
+  # Content-Typeを動的に設定
+  content_type = lookup({
+    "html" = "text/html",
+    "css"  = "text/css",
+    "js"   = "application/javascript",
+  }, element(split(".", each.value), length(split(".", each.value)) -1), -1)
 
   # The filemd5() function is available in Terraform 0.11.12 and later
   # For Terraform 0.11.11 and earlier, use the md5() function and the file() function:
@@ -54,7 +60,6 @@ data "aws_iam_policy_document" "terraform_origin_bucket_policy" {
 
     actions = [
       "s3:GetObject",
-      "s3:PutObject",
     ]
 
     resources = [
@@ -74,3 +79,4 @@ resource "aws_s3_bucket_policy" "terraform_s3_bucket_policy" {
   bucket = aws_s3_bucket.terraform_s3_web_server.bucket
   policy = data.aws_iam_policy_document.terraform_origin_bucket_policy.json
 }
+

@@ -6,7 +6,7 @@ locals {
 # ACM（AWS Certificate Manager）で事前に発行したSSL/TLS証明書の情報
 data "aws_acm_certificate" "terraform_main_domain" {
   region   = "us-east-1"
-  domain   = "*.${local.my_domain}"
+  domain   = local.my_domain
   statuses = ["ISSUED"]
 }
 
@@ -39,11 +39,11 @@ resource "aws_cloudfront_distribution" "terraform_s3_distribution" {
     target_origin_id = local.s3_origin_id
 
     forwarded_values {
-      query_string = false
+       query_string = false
 
-      cookies {
-        forward = "none"
-      }
+       cookies {
+         forward = "none"
+       }
     }
 
     viewer_protocol_policy = "redirect-to-https"

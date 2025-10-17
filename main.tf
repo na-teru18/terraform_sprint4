@@ -10,5 +10,5 @@ terraform {
 
 # 使用するプロバイダ情報
 provider "aws" {
-  region = "ap-northeast-1"
+  region = "us-east-1"
 }
