@@ -96,55 +96,90 @@ resource "aws_launch_template" "terraform_launch_template" {
     security_groups             = [aws_security_group.terraform_api_sg.id]
   }
 
-#   user_data = <<-EOF
-# #!/bin/bash
-# HOME_DIR="/home/ec2-user/"
+  depends_on = [aws_db_instance.terraform_rds]
 
-# dnf update -y
-# dnf install -y git golang nginx
+  user_data = <<-EOF
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+echo "=== UserData開始 ==="
 
-# cd ${HOME_DIR}
-# git clone https://github.com/CloudTechOrg/cloudtech-reservation-api.git
+# MySQLクライアントのインストール 
+sudo yum update -y
+sudo yum install -y https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
+sudo yum install mysql-community-server -y
+sudo systemctl enable mysqld
+sudo systemctl start mysqld
 
-# cat << 'SERVICE_FILE' > /etc/systemd/system/goserver.service
-# [Unit]
-# Description=Go Server
+# RDS接続情報
+RDS_HOST="$${aws_db_instance.rds.endpoint}"
+DB_USER="$${aws_db_instance.rds.username}"
+DB_PASSWORD="{aws_db_instance.rds.password}"
+DB_NAME="$${aws_db_instance.rds.db_name}"
 
-# [Service]
-# WorkingDirectory=/home/ec2-user/cloudtech-reservation-api
-# ExecStart=/usr/bin/go run main.go
-# User=ec2-user
-# Restart=always
+# スキーマとテーブルの作成
+SQL_COMMANDS=$(cat <<EOF
+CREATE DATABASE IF NOT EXISTS $${DB_NAME};
+CREATE TABLE IF NOT EXISTS $${DB_NAME}.Reservations (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    company_name VARCHAR(255) NOT NULL,
+    reservation_date DATE NOT NULL,
+    number_of_people INT NOT NULL
+);
+INSERT INTO $${DB_NAME}.Reservations (company_name, reservation_date, number_of_people)
+VALUES ('株式会社テスト', '2024-04-21', 5);
+SELECT * FROM reservation_db.Reservations;
+EOF)
 
-# [Install]
-# WantedBy=multi-user.target
-# SERVICE_FILE
+# RDSに接続
+export MYSQL_PWD=$${DB_PASSWORD}
+echo "$${SQL_COMMANDS}"  |  mysql -h $${RDS_HOST} -P 3306 -u $${DB_USER}
 
-# systemctl daemon-reload
-# systemctl enable goserver.service
-# systemctl start goserver.service
+# SQL実行コマンドの終了ステータスを確認(RDS接続を切断)
+SQL_EXIT_CODE=$?
 
-# systemctl start nginx
-# systemctl enable nginx
+# 実行結果の確認
+if [ $${SQL_EXIT_CODE} -eq 0 ]; then
+    echo "RDSへの接続とテーブル作成に成功しました。"
+else
+    echo "RDSへの接続またはテーブル作成に失敗しました。" >&2
+fi
 
-# sed -i '/^server {/, /^}$/d' /etc/nginx/nginx.conf
+# 設定ファイルの作成
+cat <<EOF_ENV > cloudtech-reservation-api/.env
+DB_USERNAME=$${DB_USER}
+DB_PASSWORD=$${DB_PASSWORD}
+DB_SERVERNAME=$${RDS_HOST}
+DB_PORT=3306
+DB_NAME=$${DB_NAME}
+EOF_ENV
 
-# cat << 'NGINX_CONF' >> /etc/nginx/nginx.conf
-# server {
-#         listen 80;
-#         server_name _;
-#         location / {
-#             proxy_pass http://localhost:8080;
-#             proxy_http_version 1.1;
-#             proxy_set_header Upgrade $http_upgrade;
-#             proxy_set_header Connection 'upgrade';
-#             proxy_set_header Host $host;
-#             proxy_cache_bypass $http_upgrade;
-#         }
-# }
+# .envファイルの設定を反映させるためにプロセスの再起動を実行
+PID=$(sudo lsof -i :8080)
 
-# systemctl restart nginx
-#   EOF
+if [ ! -z "$${PID}" ]; then
+    sudo kill -9 $${PID}
+else
+fi
+
+# データベースURL
+TARGET_URL="http://localhost:8080/test"
+
+# データベースへの接続確認
+curl -s -f -o /dev/null ${TARGET_URL}
+
+# curlコマンドの終了ステータスを確認
+CURL_EXIT_CODE=$?
+
+# 実行結果の確認
+if [ $${CURL_EXIT_CODE} -eq 0 ]; then
+    echo "データベース接続テストに成功しました。"
+else
+    echo "データベース接続テストに失敗しました。" >&2
+fi
+
+exit 0
+EOF
 }
 
 # Auto Scaling Group
