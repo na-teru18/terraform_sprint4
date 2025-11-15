@@ -98,7 +98,8 @@ resource "aws_launch_template" "terraform_launch_template" {
 
   depends_on = [aws_db_instance.terraform_rds]
 
-  user_data = <<-EOF
+# aws_launch_template内でuser_dataを指定する場合、User DataがBase64でエンコードされた文字列である必要がある→Terraformの組み込み関数である base64encode を使ってエンコード
+  user_data = base64encode(<<-EOF
 #!/bin/bash
 set -euo pipefail
 exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
@@ -180,6 +181,7 @@ fi
 
 exit 0
 EOF
+  )
 }
 
 # Auto Scaling Group
