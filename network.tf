@@ -19,7 +19,7 @@ resource "aws_internet_gateway" "terraform_igw" {
 resource "aws_subnet" "terraform_public_subnet_1" {
   vpc_id            = aws_vpc.terraform_vpc.id
   cidr_block        = "10.0.0.0/24"
-  availability_zone = "ap-northeast-1a"
+  availability_zone = "us-east-1a"
   tags = {
     Name = "web-subnet-01"
   }
