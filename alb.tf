@@ -166,7 +166,7 @@ fi
 TARGET_URL="http://localhost:8080/test"
 
 # データベースへの接続確認
-curl -s -f -o /dev/null ${TARGET_URL}
+curl -s -f -o /dev/null $${TARGET_URL}
 
 # curlコマンドの終了ステータスを確認
 CURL_EXIT_CODE=$?
