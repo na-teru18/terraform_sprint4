@@ -44,7 +44,7 @@ resource "aws_db_subnet_group" "terraform_db_subnet_group" {
 resource "aws_db_instance" "terraform_rds" {
   identifier             = "db-server"
   allocated_storage      = 10
-  db_name                = "dbserver"
+  db_name                = "reservation_db"
   engine                 = "mysql"
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"
