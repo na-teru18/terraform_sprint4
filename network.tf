@@ -121,6 +121,11 @@ resource "aws_route_table" "terraform_private_api_routetable" {
   vpc_id = aws_vpc.terraform_vpc.id
 
   route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.terraform_ngw.id
+  }
+
+  route {
     cidr_block = "10.0.0.0/21"
     gateway_id = "local"
   }
