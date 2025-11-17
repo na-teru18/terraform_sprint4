@@ -127,7 +127,7 @@ while [ $${RETRY} -lt $${MAX_RETRIES} ]; do
     echo "RDS接続ポート (3306) の開放を確認しました。"
     break
   fi
-  echo "RDSポート3306が利用不可です。${SLEEP_TIME}秒待機します (試行回数: $((RETRY + 1)))"
+  echo "RDSポート3306が利用不可です。$${SLEEP_TIME}秒待機します (試行回数: $((RETRY + 1)))"
   sleep $${SLEEP_TIME}
   # $((...))	算術式展開（Arithmetic Expansion）です。括弧内の計算を実行し、その結果を文字列として返します。
   RETRY=$((RETRY + 1))
