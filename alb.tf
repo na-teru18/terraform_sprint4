@@ -112,6 +112,36 @@ sudo yum install mysql-community-server -y
 sudo systemctl enable mysqld
 sudo systemctl start mysqld
 
+echo "=== RDSの接続待機を開始... ==="
+MAX_RETRIES=30
+SLEEP_TIME=5
+RETRY=0
+
+# nc (netcat) コマンドでポート3306への接続を試みる
+# ループ処理を行うwhile 現在の試行回数(RETRY)が最大試行回数(MAX_RETRIES)よりも小さい場合、doからdoneまでのコードを実行し続ける
+# -lt: 左辺が右辺よりも小さい ※比較演算子
+while [ $${RETRY} -lt $${MAX_RETRIES} ]; do
+  nc -z -w 5 $${RDS_HOST} 3306
+
+  if [ $? -eq 0 ]; then
+    echo "RDS接続ポート (3306) の開放を確認しました。"
+    break
+  fi
+  echo "RDSポート3306が利用不可です。${SLEEP_TIME}秒待機します (試行回数: $((RETRY + 1)))"
+  sleep $${SLEEP_TIME}
+  # $((...))	算術式展開（Arithmetic Expansion）です。括弧内の計算を実行し、その結果を文字列として返します。
+  RETRY=$((RETRY + 1))
+done
+
+# -eq: 等しい ※比較演算子
+# >&2: echoのメッセージを標準エラー出力に送る
+# exit: スクリプトを終了 終了コード1: スクリプトが失敗
+if [ $${RETRY} -eq $${MAX_RETRIES} ]; then
+  echo "エラー: RDSへの接続がタイムアウトしました。スクリプトを終了します。" >&2
+  exit 1
+fi
+
+# =======================================================
 # RDS接続情報
 RDS_HOST="${aws_db_instance.terraform_rds.address}"
 DB_USER="${aws_db_instance.terraform_rds.username}"
@@ -132,6 +162,7 @@ VALUES ('株式会社テスト', '2024-04-21', 5);
 SELECT * FROM reservation_db.Reservations;
 EOF)
 
+# =======================================================
 # RDSに接続
 export MYSQL_PWD=$${DB_PASSWORD}
 echo "$${SQL_COMMANDS}"  |  mysql -h $${RDS_HOST} -P 3306 -u $${DB_USER}
@@ -146,6 +177,7 @@ else
     echo "RDSへの接続またはテーブル作成に失敗しました。" >&2
 fi
 
+# =======================================================
 # 設定ファイルの作成
 cat <<EOF_ENV > cloudtech-reservation-api/.env
 DB_USERNAME=$${DB_USER}
@@ -163,6 +195,7 @@ if [ ! -z "$${PID}" ]; then
 else
 fi
 
+# =======================================================
 # データベースURL
 TARGET_URL="http://localhost:8080/test"
 
@@ -179,6 +212,7 @@ else
     echo "データベース接続テストに失敗しました。" >&2
 fi
 
+# exit: スクリプトを終了 終了コード0: スクリプトが正常終了(成功)
 exit 0
 EOF
   )
