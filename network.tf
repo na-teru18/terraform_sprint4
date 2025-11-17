@@ -180,6 +180,26 @@ resource "aws_route_table_association" "db_sub_assc_2" {
   route_table_id = aws_route_table.terraform_private_db_routetable.id
 }
 
+# Nat_Gateway_ElasticIP
+resource "aws_eip" "terraform_nat_gip" {
+  count  = 1  // 作成するEIPの数
+  domain = "vpc"  // VPC内でEIPを使用（vpc = trueの代わりに）
+}
+
+# Nat_Gateway
+resource "aws_nat_gateway" "terraform_ngw" {
+  allocation_id = aws_eip.terraform_nat_gip[0].id // 最初のEIP（Elastic IP）を使用
+  subnet_id     = aws_subnet.terraform_public_subnet_2.id // パブリックサブネットを指定する
+
+  tags = {
+    Name = "reservation-ng"
+  }
+
+  # To ensure proper ordering, it is recommended to add an explicit dependency
+  # on the Internet Gateway for the VPC.
+  depends_on = [aws_internet_gateway.terraform_igw]
+}
+
 # セキュリティ・グループ
 resource "aws_security_group" "terraform_ec2_sg" {
   name        = "ec2-sg"
