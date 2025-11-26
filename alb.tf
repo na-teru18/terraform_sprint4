@@ -153,7 +153,7 @@ fi
 # 設定ファイルの作成
 mkdir -p cloudtech-reservation-api
 
-cat <<EOF_ENV > cloudtech-reservation-api/.env
+cat <<EOF_ENV | sudo tee cloudtech-reservation-api/.env > /dev/null
 DB_USERNAME=$${DB_USER}
 DB_PASSWORD=$${DB_PASSWORD}
 DB_SERVERNAME=$${RDS_HOST}
